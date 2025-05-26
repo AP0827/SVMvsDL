@@ -1,0 +1,107 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Light mode colors */
+    --background: 210 40% 98%;
+    --foreground: 222.2 84% 4.9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+
+    --primary: 262 80% 74%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 260 32% 54%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --accent: 199 95% 48%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+
+    --radius: 0.5rem;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* Tech colors (custom palette) */
+    --tech-primary: #9b87f5;
+    --tech-secondary: #7E69AB;
+    --tech-accent: #0EA5E9;
+    --tech-background: #F9FAFB;
+    --tech-card: #FFFFFF;
+    --tech-text: #1A1F2C;
+    --tech-muted: #8E9196;
+  }
+
+  .dark {
+    /* Dark mode colors */
+    --background: 0 0% 0%;           /* pure black */
+    --foreground: 210 40% 98%;       /* bright text */
+
+    --card: 0 0% 0%;                 /* black card */
+    --card-foreground: 210 40% 98%;
+
+    --popover: 0 0% 0%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 262 80% 74%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+
+    --secondary: 260 32% 54%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 0 0% 20%;               /* dark gray muted */
+    --muted-foreground: 210 40% 98%;
+
+    --accent: 199 95% 48%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 0 0% 30%;             /* dark gray borders */
+    --input: 0 0% 30%;
+    --ring: 0 0% 60%;
+  }
+
+  /* Global reset for border color */
+  * {
+    @apply border-border;
+  }
+
+  /* Set base background and text color from custom vars */
+  html, body {
+    height: 100%;
+    margin: 0;
+    font-smooth: antialiased;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+
+  body {
+    @apply bg-tech-background text-tech-text;
+  }
+}
