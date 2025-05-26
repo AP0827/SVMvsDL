@@ -5,7 +5,7 @@ import { getFirestore } from "firebase/firestore";
 // https://firebase.google.com/docs/web/setup#available-libraries
 
 const firebaseConfig = {
-  apiKey: "AIzaSyD7mqh0bEmBGGk_6by-P8JoIk4mQGYSUHE",
+  apiKey: "{insert your key}",
   authDomain: "har-wearable.firebaseapp.com",
   projectId: "har-wearable",
   storageBucket: "har-wearable.firebasestorage.app",
