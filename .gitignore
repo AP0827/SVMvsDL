@@ -76,7 +76,7 @@ logs/
 checkpoints/
 *.tfevents.*
 
-# --- Local dev runtime state (PIDs and logs from scripts/dev.sh) ---
+# --- Local dev runtime state ---
 .run/
 
 # --- IDE / editor ---
@@ -85,6 +85,9 @@ checkpoints/
 *.swp
 *.swo
 *~
+
+# --- Claude Code per-machine settings ---
+.claude/
 
 # --- OS ---
 .DS_Store

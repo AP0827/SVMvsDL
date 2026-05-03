@@ -49,11 +49,13 @@ If you want to remove these artifacts from git history entirely, that requires r
 
 Anyone deploying this project should at minimum:
 
-- [ ] Run the API behind a real WSGI server (`gunicorn` is in `app/backend/requirements.txt`) — never `app.run(debug=True)`.
-- [ ] Set `CORS_ORIGINS` to an explicit allowlist of dashboard origins.
+- [ ] Run the API behind a real WSGI server — the `api` service in `docker-compose.yml` already uses `gunicorn`. Never `app.run(debug=True)` in production.
+- [ ] Set `CORS_ORIGINS` (in `app/backend/.env`) to an explicit allowlist of dashboard origins.
 - [ ] Add authentication in front of `/api/*` (e.g. via API gateway, OAuth proxy, or Firebase Auth).
 - [ ] Add rate limiting (Flask-Limiter, nginx, or API gateway).
 - [ ] Lock Firestore Security Rules to require authentication.
-- [ ] Use a managed secret store (Google Secret Manager, AWS Secrets Manager, Doppler) rather than service-account JSON files on disk.
+- [ ] Use a managed secret store (Google Secret Manager, AWS Secrets Manager, Doppler) rather than service-account JSON files baked into the image. The provided `docker-compose.yml` mounts `app/backend/credentials/` read-only — swap that mount for a secret-store integration when you go to prod.
+- [ ] Pin and scan the base images in `app/backend/Dockerfile` and `app/frontend/Dockerfile` (Trivy, Grype, or your registry's scanner).
+- [ ] Build the frontend image with the **production** Firebase web config — those values are baked into the JS bundle and are public the moment you ship.
 - [ ] Configure structured logging and ship logs to a central destination.
 - [ ] Set up uptime / error monitoring (Sentry, Cloud Monitoring, etc.).

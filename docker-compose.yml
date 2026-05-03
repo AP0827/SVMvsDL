@@ -1,0 +1,75 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: app/backend/Dockerfile
+    image: kinesis-backend:latest
+    container_name: kinesis-api
+    command: gunicorn -w 2 -b 0.0.0.0:5001 app.backend.app:app
+    env_file:
+      - app/backend/.env
+    environment:
+      - HOST=0.0.0.0
+      - PORT=5001
+    volumes:
+      - ./app/backend/credentials:/app/app/backend/credentials:ro
+    ports:
+      - "5001:5001"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:5001/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  ws:
+    image: kinesis-backend:latest
+    container_name: kinesis-ws
+    command: python -m app.backend.websocket_server
+    env_file:
+      - app/backend/.env
+    environment:
+      - API_BASE_URL=http://api:5001
+    volumes:
+      - ./app/backend/credentials:/app/app/backend/credentials:ro
+    ports:
+      - "5002:5002"
+    depends_on:
+      api:
+        condition: service_started
+    restart: unless-stopped
+
+  simulator:
+    image: kinesis-backend:latest
+    container_name: kinesis-simulator
+    command: python -m app.backend.simulator
+    env_file:
+      - app/backend/.env
+    environment:
+      - WS_URL=ws://ws:5002
+    depends_on:
+      ws:
+        condition: service_started
+    restart: "no"
+    profiles: ["simulator"]
+
+  frontend:
+    build:
+      context: .
+      dockerfile: app/frontend/Dockerfile
+      args:
+        VITE_FIREBASE_API_KEY: ${VITE_FIREBASE_API_KEY}
+        VITE_FIREBASE_AUTH_DOMAIN: ${VITE_FIREBASE_AUTH_DOMAIN}
+        VITE_FIREBASE_PROJECT_ID: ${VITE_FIREBASE_PROJECT_ID}
+        VITE_FIREBASE_STORAGE_BUCKET: ${VITE_FIREBASE_STORAGE_BUCKET}
+        VITE_FIREBASE_MESSAGING_SENDER_ID: ${VITE_FIREBASE_MESSAGING_SENDER_ID}
+        VITE_FIREBASE_APP_ID: ${VITE_FIREBASE_APP_ID}
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:5001}
+    image: kinesis-frontend:latest
+    container_name: kinesis-frontend
+    ports:
+      - "8080:8080"
+    depends_on:
+      - api
+    restart: unless-stopped

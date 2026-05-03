@@ -34,6 +34,8 @@ import isEqual from "lodash.isequal";
 
 const queryClient = new QueryClient();
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:5001";
+
 type Activity =
   | "walking"
   | "running"
@@ -71,7 +73,7 @@ const App = () => {
 
   // Fetch initial model state from backend on mount
   useEffect(() => {
-    fetch("http://localhost:5001/api/model")
+    fetch(`${API_BASE_URL}/api/model`)
       .then((res) => res.json())
       .then((data) => {
         if (data.active_model === "svm" || data.active_model === "lstm") {
@@ -167,7 +169,7 @@ const App = () => {
     setModelType(selectedModel);
 
     try {
-      const response = await fetch("http://localhost:5001/api/model", {
+      const response = await fetch(`${API_BASE_URL}/api/model`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

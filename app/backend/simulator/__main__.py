@@ -29,9 +29,12 @@ def parse_line(line):
         print(f"[WARN] Skipping line due to parse error: {e}")
         return None
 
+WS_URL = os.environ.get("WS_URL", "ws://localhost:5002")
+
+
 async def simulate():
     try:
-        async with websockets.connect("ws://localhost:5002") as websocket:
+        async with websockets.connect(WS_URL) as websocket:
             print("✅ Simulated connected to WebSocket server")
 
             with open(file_path, "r") as file:

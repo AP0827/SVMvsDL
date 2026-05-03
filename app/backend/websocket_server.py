@@ -1,4 +1,5 @@
 import asyncio
+import os
 import websockets
 import json
 import aiohttp
@@ -10,6 +11,8 @@ WINDOW_SIZE = 50
 PREDICTION_INTERVAL = 0.2
 BUFFER = deque(maxlen=200)
 
+API_BASE_URL = os.environ.get("API_BASE_URL", "http://127.0.0.1:5001")
+
 SENSOR_SOURCE = "unknown"
 USER_ID = "user_1"
 ACTUAL_ACTIVITY = "unknown"
@@ -18,7 +21,7 @@ TIME_DELTAS = []
 MAX_TIME_SAMPLES = 100
 
 async def send_prediction(window, source, user_id=None, actual_activity=None):
-    url = "http://127.0.0.1:5001/api/predict"
+    url = f"{API_BASE_URL}/api/predict"
     payload = {
         "window": window,
         "source": source,

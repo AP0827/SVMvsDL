@@ -1,13 +1,14 @@
-# SVM vs Deep Learning — Real-Time Human Activity Recognition
+# Kinesis — Real-Time Human Activity Recognition
 
-[![CI](https://github.com/aakri0/SVMvsDL/actions/workflows/ci.yml/badge.svg)](https://github.com/aakri0/SVMvsDL/actions/workflows/ci.yml)
+[![CI](https://github.com/aakri0/Kinesis/actions/workflows/ci.yml/badge.svg)](https://github.com/aakri0/Kinesis/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
 [![Node 18+](https://img.shields.io/badge/node-18+-green.svg)](https://nodejs.org/)
+[![Docker](https://img.shields.io/badge/docker-compose-2496ed.svg)](https://docs.docker.com/compose/)
 
 A full-stack human activity recognition (HAR) system that benchmarks classical machine learning (SVM) against deep learning (LSTM) on tri-axial accelerometer data, with a live inference pipeline driven by an ESP32 wearable.
 
-The project covers the complete ML lifecycle: dataset preparation, model training and comparison in Jupyter, a Flask inference API, a real-time WebSocket ingestion server, a React/TypeScript dashboard, and embedded firmware for an ESP32-based wearable.
+The project covers the complete ML lifecycle: dataset preparation, model training and comparison in Jupyter, a Flask inference API, a real-time WebSocket ingestion server, a React/TypeScript dashboard, and embedded firmware for an ESP32-based wearable. The whole stack is dockerized — `./start.sh` brings everything up.
 
 > **Status:** Research / academic project. Trained models, datasets, and a working end-to-end demo are included.
 
@@ -21,12 +22,11 @@ The project covers the complete ML lifecycle: dataset preparation, model trainin
 - [Repository Layout](#repository-layout)
 - [Getting Started](#getting-started)
   - [Prerequisites](#prerequisites)
-  - [1. Clone and bootstrap](#1-clone-and-bootstrap)
-  - [2. Run the stack with one command](#2-run-the-stack-with-one-command)
-  - [3. Backend (Flask + WebSocket)](#3-backend-flask--websocket)
-  - [4. Frontend (React + Vite)](#4-frontend-react--vite)
-  - [5. ESP32 firmware](#5-esp32-firmware)
-  - [6. Notebooks (training & data prep)](#6-notebooks-training--data-prep)
+  - [1. Clone and configure](#1-clone-and-configure)
+  - [2. Run the stack with Docker](#2-run-the-stack-with-docker)
+  - [3. Run without Docker (manual)](#3-run-without-docker-manual)
+  - [4. ESP32 firmware](#4-esp32-firmware)
+  - [5. Notebooks (training & data prep)](#5-notebooks-training--data-prep)
 - [REST API Reference](#rest-api-reference)
 - [Dataset](#dataset)
 - [Models](#models)
@@ -42,6 +42,7 @@ The project covers the complete ML lifecycle: dataset preparation, model trainin
 
 - **Dual-model inference** — switch between SVM and LSTM at runtime via a single REST endpoint.
 - **Real-time pipeline** — ESP32 streams 50 Hz accelerometer data over WebSocket; predictions are written to Firestore and pushed to the dashboard live.
+- **One-command deploy** — `./start.sh` boots api + websocket + dashboard via Docker Compose. `./stop.sh` tears it down.
 - **Reproducible training** — Jupyter notebooks cover dataset windowing, feature engineering, hyperparameter search (GridSearchCV), LSTM/CNN architectures, and evaluation.
 - **Six recognized activities** — Walking, Jogging, Standing, Sitting, Upstairs, Downstairs.
 - **Polished frontend** — React 18 + TypeScript + Vite + TailwindCSS + shadcn/ui dashboard with charts (Recharts) and live state from Firestore.
@@ -52,8 +53,8 @@ The project covers the complete ML lifecycle: dataset preparation, model trainin
 ```
 ┌──────────────┐        ┌──────────────────┐        ┌──────────────────┐
 │  ESP32 board │ ─────▶ │  WebSocket       │ ─────▶ │  Flask inference │
-│  (3-axis     │  WS    │  server          │  HTTP  │  API             │
-│  accel @50Hz)│        │  (port 5002)     │        │  (port 5001)     │
+│  (3-axis     │  WS    │  server (ws)     │  HTTP  │  API (api)       │
+│  accel @50Hz)│        │  port 5002       │        │  port 5001       │
 └──────────────┘        └──────────────────┘        └────────┬─────────┘
                                                              │
                                                              ▼
@@ -65,36 +66,41 @@ The project covers the complete ML lifecycle: dataset preparation, model trainin
                                                              ▼
                                                     ┌──────────────────┐
                                                     │  React dashboard │
-                                                    │  (Vite dev: 8080)│
+                                                    │  (frontend:8080) │
                                                     └──────────────────┘
 ```
 
-A simulator (`app/backend/simulator`) can replace the ESP32 entirely, replaying the WISDM dataset over WebSocket so the rest of the stack works without hardware.
+Each box maps to a service in [`docker-compose.yml`](docker-compose.yml). A simulator service (`--with-simulator`) can replace the ESP32 entirely, replaying the WISDM dataset over WebSocket.
 
 ## Tech Stack
 
 | Layer        | Technology                                                        |
 |--------------|-------------------------------------------------------------------|
 | ML / Models  | scikit-learn (SVM, GridSearchCV), TensorFlow / Keras (LSTM, CNN)  |
-| Backend      | Python 3.10+, Flask 3, Flask-CORS, websockets, aiohttp            |
+| Backend      | Python 3.11, Flask 3, Flask-CORS, websockets, aiohttp, gunicorn   |
 | Persistence  | Google Firestore (via `firebase-admin`)                           |
 | Frontend     | React 18, TypeScript, Vite 5, TailwindCSS, shadcn/ui, Recharts    |
+| Serving      | nginx (alpine) for the production frontend bundle                 |
+| Orchestration| Docker + Docker Compose                                           |
 | Firmware     | Arduino C++ for ESP32 (`WebSocketsClient`, `WiFi`)                |
 | Notebooks    | Jupyter, NumPy, pandas, matplotlib, seaborn, SciPy                |
 
 ## Repository Layout
 
 ```
-SVMvsDL/
+Kinesis/
+├── docker-compose.yml           # api + ws + frontend (+ simulator profile)
+├── start.sh                     # Bring the stack up
+├── stop.sh                      # Tear it down
+├── .env.example                 # Compose-level env (Firebase web config, API base URL)
 ├── SVMvsDL.ipynb                # Model training & comparison notebook
 ├── SaveDatasetCSV.ipynb         # WISDM raw → tidy CSV conversion
 ├── requirements.txt             # Notebook / training dependencies
 ├── datasets/
 │   └── WISDM/                   # Raw WISDM v1.1 data
-├── scripts/
-│   └── dev.sh                   # Start/stop/status helper for the stack
 └── app/
     ├── backend/                 # Flask API + WebSocket ingestion
+    │   ├── Dockerfile           # Shared image for api / ws / simulator
     │   ├── app.py               # Flask entrypoint (port 5001)
     │   ├── websocket_server.py  # Realtime ingestion (port 5002)
     │   ├── routes/predict.py    # /api/predict, /api/model
@@ -102,8 +108,11 @@ SVMvsDL/
     │   ├── simulator/           # Replays WISDM data over WebSocket
     │   ├── switch_model.py      # Thread-safe active-model selector
     │   ├── firebase_client.py   # Firestore admin client
+    │   ├── credentials/         # Service-account JSON (gitignored)
     │   └── requirements.txt     # Backend Python dependencies
     ├── frontend/                # React + Vite dashboard
+    │   ├── Dockerfile           # Multi-stage: vite build → nginx
+    │   └── nginx.conf
     └── sketch_may16a/
         └── sketch_may16a.ino    # ESP32 firmware
 ```
@@ -112,103 +121,98 @@ SVMvsDL/
 
 ### Prerequisites
 
-- **Python 3.10+** (TensorFlow 2.19 currently supports 3.10–3.12)
-- **Node.js 18+** and **npm** (or `pnpm` / `bun`)
+- **Docker** ≥ 24 with the **Compose v2** plugin (Docker Desktop bundles both)
 - **Arduino IDE** or **PlatformIO** with the ESP32 board package and the `WebSockets` library by Markus Sattler — only required if you want to use real hardware
 - A **Firebase project** with Firestore enabled, plus:
   - A service-account JSON key (for the backend)
   - A web app config (for the frontend)
 
-### 1. Clone and bootstrap
+For non-Docker workflows you'll also want **Python 3.10+** (3.10–3.12 supported by TensorFlow 2.19) and **Node.js 18+**.
+
+### 1. Clone and configure
 
 ```bash
-git clone https://github.com/aakri0/SVMvsDL.git
-cd SVMvsDL
-python -m venv .venv
-source .venv/bin/activate          # Windows: .venv\Scripts\activate
+git clone https://github.com/aakri0/Kinesis.git
+cd Kinesis
+
+# Three .env files — backend, frontend, and the compose-level one for build args.
+cp app/backend/.env.example  app/backend/.env
+cp app/frontend/.env.example app/frontend/.env
+cp .env.example              .env
+
+# Drop your Firebase service-account JSON into app/backend/credentials/.
+# Anything matching app/backend/credentials/*.json is auto-discovered.
+mkdir -p app/backend/credentials
+mv ~/Downloads/your-firebase-key.json app/backend/credentials/
+```
+
+Fill in the Firebase web config in both `app/frontend/.env` and the root `.env` (the compose file passes the latter into the frontend image as build args). See [Configuration & Secrets](#configuration--secrets) for what each value does.
+
+### 2. Run the stack with Docker
+
+```bash
+./start.sh                  # api + ws + frontend
+./start.sh --with-simulator # also replay WISDM data (no hardware needed)
+./start.sh --rebuild        # force rebuild of images
+./start.sh --logs           # tail compose logs after start
+
+./stop.sh                   # stop and remove containers
+./stop.sh --volumes         # also drop named volumes
+./stop.sh --rmi             # also remove built images
+```
+
+After `./start.sh`, browse to:
+
+| URL                               | What                  |
+|-----------------------------------|-----------------------|
+| http://localhost:8080             | Dashboard             |
+| http://localhost:5001/health      | API health check      |
+| ws://localhost:5002               | WebSocket ingest      |
+
+Compose service names (`api`, `ws`, `frontend`, `simulator`) can be addressed individually:
+
+```bash
+docker compose logs -f api
+docker compose restart frontend
+docker compose --profile simulator up -d simulator
+```
+
+### 3. Run without Docker (manual)
+
+If you'd rather run each process directly on your host, the commands are:
+
+```bash
+python -m venv .venv && source .venv/bin/activate
 pip install -r app/backend/requirements.txt
+
+python -m app.backend.app                # http://localhost:5001
+python -m app.backend.websocket_server   # ws://localhost:5002
+python -m app.backend.simulator          # optional WISDM replay
+
+cd app/frontend && npm install && npm run dev   # http://localhost:8080
 ```
 
-If you also intend to run the training notebooks:
-
-```bash
-pip install -r requirements.txt
-```
-
-### 2. Run the stack with one command
-
-A helper script at [`scripts/dev.sh`](scripts/dev.sh) starts, stops, and inspects every service in the stack. PIDs and per-service log files are kept under `.run/` (gitignored).
-
-```bash
-./scripts/dev.sh start            # api + ws + frontend (the usual three)
-./scripts/dev.sh status           # see what's running
-./scripts/dev.sh logs api         # tail one service's log
-./scripts/dev.sh stop             # stop everything that's running
-./scripts/dev.sh restart frontend # restart a single service
-```
-
-Add `simulator` explicitly to replay the WISDM dataset over WebSocket when no hardware is connected:
-
-```bash
-./scripts/dev.sh start api ws simulator frontend
-```
-
-If you'd rather run each process in its own terminal, the manual commands are below.
-
-### 3. Backend (Flask + WebSocket)
-
-The backend is split into two cooperating processes:
-
-| Process            | Command                                                  | Port |
-|--------------------|----------------------------------------------------------|------|
-| Flask inference API| `python -m app.backend.app`                              | 5001 |
-| WebSocket ingest   | `python -m app.backend.websocket_server`                 | 5002 |
-| WISDM simulator    | `python -m app.backend.simulator` (optional, no hardware)| —    |
-
-> Run all commands from the **repo root** so the `app.backend...` package paths resolve.
-
-Before starting, copy `app/backend/.env.example` to `app/backend/.env` and drop your Firebase service-account key into `app/backend/credentials/` (the directory is gitignored). See [Configuration & Secrets](#configuration--secrets).
-
-For production, use `gunicorn` instead of the Flask dev server:
+For production (still without Docker):
 
 ```bash
 gunicorn -w 2 -b 0.0.0.0:5001 app.backend.app:app
-# or via the helper:
-./scripts/dev.sh start api-prod
 ```
 
-`scripts/dev.sh` also exposes `GUNICORN_WORKERS` and `GUNICORN_BIND` env vars for tuning.
+> Run all backend commands from the **repo root** so the `app.backend...` package paths resolve.
 
-### 4. Frontend (React + Vite)
-
-```bash
-cd app/frontend
-npm install
-cp .env.example .env       # then fill in your Firebase web config
-npm run dev                # http://localhost:8080
-```
-
-Other scripts:
-
-```bash
-npm run build              # production build
-npm run preview            # preview the production build
-npm run lint               # eslint
-```
-
-### 5. ESP32 firmware
+### 4. ESP32 firmware
 
 1. Open `app/sketch_may16a/sketch_may16a.ino` in the Arduino IDE.
 2. Install the ESP32 board package (Boards Manager → "esp32") and the **WebSockets** library by Markus Sattler.
 3. Update the `ssid`, `password`, and `host` placeholders at the top of the sketch:
-   - `host` is the IP of the machine running `websocket_server.py`.
-   - `port` is set to `5002` to match `websocket_server.py`. Keep these aligned if you change either.
+   - `host` is the IP of the machine running the `ws` service.
+   - `port` is `5002` to match `websocket_server.py`. Keep these aligned if you change either.
 4. Wire a 3-axis analog accelerometer (e.g. ADXL335) to GPIOs 34 (X), 35 (Y), 32 (Z).
 5. Flash the board. Watch the serial monitor at 115200 baud for connection status.
 
-No hardware? Use the simulator instead — it produces the same WebSocket message format from the WISDM CSV.
+No hardware? Use `./start.sh --with-simulator` instead — it produces the same WebSocket message format from the WISDM CSV.
 
-### 6. Notebooks (training & data prep)
+### 5. Notebooks (training & data prep)
 
 ```bash
 pip install -r requirements.txt
@@ -261,7 +265,7 @@ Switch the active model at runtime.
 
 ### `GET /test-firestore`
 
-Smoke-test the Firestore connection by writing a sentinel document.
+Smoke-test the Firestore connection by writing a sentinel document. Disabled unless `ENABLE_FIRESTORE_TEST=1`.
 
 ## Dataset
 
@@ -287,23 +291,34 @@ Trained artifacts are committed under `app/backend/model/` so the API works out 
 
 This repo never contains real credentials. You will need to provide your own. See [SECURITY.md](SECURITY.md) for the full disclosure policy and history-rotation guidance.
 
+There are **three** `.env` files:
+
+| File                       | Used by                              | What goes in it                              |
+|----------------------------|--------------------------------------|----------------------------------------------|
+| `app/backend/.env`         | Flask app + websocket_server         | `FIREBASE_CREDENTIALS`, `CORS_ORIGINS`, `API_BASE_URL`, `ENABLE_FIRESTORE_TEST`, etc. |
+| `app/frontend/.env`        | Vite dev server (`npm run dev`)      | `VITE_FIREBASE_*`, `VITE_API_BASE_URL`        |
+| `.env` (repo root)         | docker-compose build args            | Same `VITE_*` keys, baked into the frontend image at build time |
+
+All three are gitignored. Each has an adjacent `.env.example`.
+
 **Backend — Firestore admin & runtime config:**
 
 1. In the Firebase console, generate a service-account JSON key.
 2. Either:
    - Save it to `app/backend/credentials/<anything>.json` — `firebase_client.py` auto-discovers any `*.json` in that folder (it is gitignored), or
    - Set `FIREBASE_CREDENTIALS=/absolute/path/to/key.json` in your environment.
-3. Copy `app/backend/.env.example` to `app/backend/.env` and set:
+3. In `app/backend/.env`, set:
    - `CORS_ORIGINS` — comma-separated allowlist of dashboard origins (e.g. `https://your-dashboard.example.com`). Defaults to `localhost:8080` for development.
    - `FLASK_DEBUG=0` (default). **Never** set this to `1` in production — Flask debug mode allows arbitrary code execution via the Werkzeug debugger.
+   - `API_BASE_URL` — where the websocket server sends prediction requests. Compose overrides this to `http://api:5001` for inter-container traffic.
    - `ENABLE_FIRESTORE_TEST` — leave unset; the `/test-firestore` endpoint is disabled by default.
 4. Do **not** commit absolute paths, service-account keys, or `.env` files.
 
-**Frontend — Firestore web SDK:**
+**Frontend — Firestore web SDK & API base URL:**
 
-1. Copy `app/frontend/.env.example` to `app/frontend/.env`.
-2. Fill in the values from your Firebase web app config.
-3. `app/frontend/src/firebase.ts` reads from `import.meta.env.VITE_FIREBASE_*` — never commit a real `.env`.
+1. Fill in `VITE_FIREBASE_*` from your Firebase web app config (Project settings → General → Your apps → Web app).
+2. `VITE_API_BASE_URL` defaults to `http://localhost:5001`. Override it if you proxy the API behind a different hostname.
+3. For Docker, the same keys also need to be in the **root** `.env` so `docker compose build` can inject them into the image. They become public JS once built — Firebase web SDK keys are designed for this.
 
 **ESP32 — WiFi credentials:**
 
@@ -311,10 +326,12 @@ Edit the `ssid`, `password`, and `host` constants in `sketch_may16a.ino` locally
 
 ## Troubleshooting
 
-- **`ModuleNotFoundError: app.backend...`** — run backend commands from the repo root, not from inside `app/backend/`.
+- **`docker compose: unknown command`** — install the Compose v2 plugin (Docker Desktop ≥ 4 has it; on Linux: `sudo apt install docker-compose-plugin`).
+- **Frontend renders but can't reach the API** — check `VITE_API_BASE_URL` in the root `.env`; remember that the browser, not the container, opens the connection, so `api` (the compose service name) won't resolve from the browser.
+- **`ModuleNotFoundError: app.backend...`** (manual mode) — run backend commands from the repo root, not from inside `app/backend/`.
 - **WebSocket port mismatch** — the firmware ships pointing at port 5000 while `websocket_server.py` listens on 5002. Pick one and align both ends.
-- **Firestore writes fail silently** — confirm the service account JSON exists at the path referenced by `firebase_client.py` and that the project ID matches the frontend config.
-- **TensorFlow install errors on Apple Silicon** — install `tensorflow-macos` and `tensorflow-metal` instead of `tensorflow`.
+- **Firestore writes fail silently** — confirm the service-account JSON exists at `app/backend/credentials/*.json` (or the path in `FIREBASE_CREDENTIALS`) and that the project ID matches the frontend config.
+- **TensorFlow install errors on Apple Silicon (manual mode)** — install `tensorflow-macos` and `tensorflow-metal` instead of `tensorflow`. The Docker image uses linux/amd64 wheels and is unaffected.
 
 ## Contributing
 

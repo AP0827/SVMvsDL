@@ -1,4 +1,4 @@
-# Contributing to SVMvsDL
+# Contributing to Kinesis
 
 Thanks for taking the time to contribute. This document is the short version of "how we work on this repo." If anything here is unclear or out of date, open an issue or PR.
 
@@ -30,15 +30,17 @@ Be kind, be specific, be technical. Disagree with the idea, not the person. Hara
 ## Development setup
 
 1. Fork the repo and clone your fork.
-2. Follow the [Getting Started](README.md#getting-started) section of the README to install backend, frontend, and notebook dependencies.
-3. Use the helper script for the local stack:
+2. Follow the [Getting Started](README.md#getting-started) section of the README to set up `.env` files and credentials.
+3. Bring the stack up with Docker:
 
    ```bash
-   ./scripts/dev.sh start            # api + ws + frontend
-   ./scripts/dev.sh status
-   ./scripts/dev.sh logs api
-   ./scripts/dev.sh stop
+   ./start.sh                  # api + ws + frontend
+   ./start.sh --with-simulator # also replay WISDM data
+   docker compose logs -f api  # tail one service's logs
+   ./stop.sh                   # tear it down
    ```
+
+   Or run each process manually — see [Run without Docker](README.md#3-run-without-docker-manual).
 
 4. Provide your own Firebase credentials — see [Configuration & Secrets](README.md#configuration--secrets). **Never commit credentials.**
 
@@ -52,6 +54,7 @@ Be kind, be specific, be technical. Disagree with the idea, not the person. Hara
 | Trained models    | `app/backend/model/`          | Keep `.h5`, `.pkl`, and `scaler*.pkl` in sync      |
 | Frontend          | `app/frontend/`               | React 18 + Vite + TailwindCSS + shadcn/ui          |
 | Firmware          | `app/sketch_may16a/`          | Arduino C++ for ESP32                              |
+| Container build   | `app/backend/Dockerfile`, `app/frontend/Dockerfile`, `docker-compose.yml` | Keep image build args & service env in sync |
 | Training          | `SVMvsDL.ipynb`               | Source of truth for model artifacts                |
 | Data prep         | `SaveDatasetCSV.ipynb`        | Raw → tidy CSV pipeline                            |
 
@@ -71,8 +74,8 @@ Before opening a PR, please:
 1. Make sure your branch is up to date with `main`.
 2. Run the relevant checks (see [Testing](#testing) and [Coding standards](#coding-standards)).
 3. Update the README, this file, or inline docs if behavior changed.
-4. Update or add `.env.example` keys if you introduced a new environment variable.
-5. Don't commit anything from `.run/`, `app/backend/credentials/`, or your local `.env` files.
+4. Update or add `.env.example` keys if you introduced a new environment variable. If the new var is consumed by the frontend at build time, add it to **both** `app/frontend/.env.example` and the root `.env.example`, and wire it through `docker-compose.yml` and `app/frontend/Dockerfile`.
+5. Don't commit anything from `app/backend/credentials/` or your local `.env` files.
 
 Your PR description should include:
 
@@ -114,8 +117,13 @@ PRs get reviewed faster when they are small, focused, and have a clear test plan
 
 There is no formal test harness yet. Until there is, please verify the following manually for the relevant areas:
 
+- **Stack smoke test:**
+  - `./start.sh --rebuild` builds and brings up api + ws + frontend.
+  - `curl -fsS http://localhost:5001/health` returns `{"status":"ok"}`.
+  - `http://localhost:8080` renders the dashboard.
+  - `./stop.sh` cleanly tears it down.
 - **Backend:**
-  - `python -m app.backend.app` starts on port 5001.
+  - `python -m app.backend.app` starts on port 5001 (manual mode).
   - `curl -X POST localhost:5001/api/predict -H 'Content-Type: application/json' -d '{"window": [...50 rows...]}'` returns an `activity` and `accuracy`.
   - `GET /api/model` and `POST /api/model` toggle between `lstm` and `svm`.
 - **WebSocket:**
@@ -128,7 +136,7 @@ There is no formal test harness yet. Until there is, please verify the following
 - **Notebooks:**
   - `SVMvsDL.ipynb` runs top-to-bottom and reproduces the saved artifacts.
 
-If you add automated tests (pytest, vitest, etc.), please also wire them into a script under `scripts/` so contributors can run them in one command.
+If you add automated tests (pytest, vitest, etc.), please also expose them as a script or `make` target so contributors can run them in one command.
 
 ## Reporting bugs
 
