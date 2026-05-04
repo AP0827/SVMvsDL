@@ -1,6 +1,6 @@
 # Kinesis — Real-Time Human Activity Recognition
 
-[![CI](https://github.com/aakri0/Kinesis/actions/workflows/ci.yml/badge.svg)](https://github.com/aakri0/Kinesis/actions/workflows/ci.yml)
+[![CI](https://github.com/AP0827/Kinesis/actions/workflows/ci.yml/badge.svg)](https://github.com/AP0827/Kinesis/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
 [![Node 18+](https://img.shields.io/badge/node-18+-green.svg)](https://nodejs.org/)
